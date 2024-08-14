@@ -20,7 +20,7 @@ def transformer(element):
 
 
 def charger(donnees):
-    en_tete = ["titre", "description"]
+    en_tete = ["nom", "adresse"]
     # création du fichier data.csv
     with open("data.csv", "w", newline="") as fichier_csv:
         writer = csv.writer(fichier_csv, delimiter=",")
