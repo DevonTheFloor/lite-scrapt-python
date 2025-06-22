@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import csv
 import logging
 import time
+from array_setting import target_tag, column_name
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -46,24 +47,31 @@ def extraire(url):
 
 def transformer(element):
     """
-    Transforme un élément HTML en un tuple (titre, adresse, description).
+    Transforme un élément HTML en une liste de valeurs basée sur target_tag.
     Gère les cas où les éléments sont absents ou mal formatés.
     """
     try:
-        titre = element.find("h3")
-        adresse = element.find("a", class_="pj-lb pj-link")
-        description = element.find("p", class_="bi-description")
+        result = []
+        for target in target_tag:
+            tag = target["tag"]
+            class_name = target["class"]
+            
+            # Recherche de l'élément avec ou sans classe
+            if class_name:
+                found_element = element.find(tag, class_=class_name)
+            else:
+                found_element = element.find(tag)
+            
+            # Extraction du texte ou valeur par défaut
+            text = found_element.get_text(strip=True) if found_element else f"{tag} non trouvé"
+            result.append(text)
         
-        titre_text = titre.get_text(strip=True) if titre else "Titre non trouvé"
-        adresse_text = adresse.get_text(strip=True) if adresse else "Adresse non trouvée"
-        description_text = description.get_text(strip=True) if description else "Description non trouvée"
-        
-        logging.info(f"Données extraites : Titre={titre_text}, Adresse={adresse_text}, Description={description_text}")
-        return (titre_text, adresse_text, description_text)
+        #logging.info(f"Données extraites : {dict(zip(column_name, result))}")
+        return result
     
     except AttributeError as attr_err:
         logging.error(f"Erreur dans la transformation, élément HTML mal formé : {attr_err}")
-        return ("Erreur", "Erreur", "Erreur")
+        return ["Erreur"] * len(target_tag)
 
 def charger(donnees, output_file):
     """
@@ -74,15 +82,14 @@ def charger(donnees, output_file):
         logging.error("Aucune donnée à écrire dans le CSV.")
         return
     
-    en_tete = ["nom", "adresse", "description"]
     try:
         with open(output_file, "w", newline="", encoding="utf-8") as fichier_csv:
             writer = csv.writer(fichier_csv, delimiter=",")
-            writer.writerow(en_tete)
+            writer.writerow(column_name)  # Utilise column_name pour l'en-tête
             valid_rows = 0
             
             for donnee in donnees:
-                if donnee and len(donnee) == 3:
+                if donnee and len(donnee) == len(column_name):
                     writer.writerow(donnee)
                     valid_rows += 1
                 else:
@@ -117,7 +124,7 @@ if __name__ == "__main__":
         exit(1)
     
     # Demander à l'utilisateur de saisir le nom du fichier CSV de sortie
-    output_file = input("Entrez le nom du fichier CSV de sortie (ex. djgeneralist.csv) : ").strip()
+    output_file = input("Entrez le nom du fichier CSV de sortie (ex. monbeaufichier.csv) : ").strip()
     if not output_file:
         logging.error("Aucun nom de fichier fourni. Arrêt du programme.")
         exit(1)

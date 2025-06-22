@@ -1,1 +1,4 @@
 dj78/
+array_setting.py
+*.csv
+__pycache__/
